@@ -4,6 +4,7 @@
 #include <complex>
 //时间
 double dt = 0.1;
+int ob_size;
 
 int main() {
 	//机器人的初期状态[x(m), y(m), yaw(Rad), v(m / s), w(rad / s)]
@@ -18,6 +19,9 @@ int main() {
 		{0, 2}, {2, 2}, {3, 4}, {5, 4}, {5, 5}, {5, 6}, {5, 9}, {8, 8}, {8, 9}, {7, 9}, {6, 5}, {6, 3}, {6, 8}, {6, 7},
 		{7, 4}, {9, 8}, {9, 11}, {9, 6}
 	}; 
+	// double obstacle[][2] = {
+	// 		{0, 2}, {2, 4}, {2, 5}, {4, 2}, {4, 4}, {5, 4}, {5, 5}, {5, 6}, {5, 9}, {8, 8}, {8, 9}, {7, 9} };
+	ob_size = sizeof(obstacle) / sizeof(double) / 2;
 	//冲突判定用的障碍物半径
 	double obstacleR = 0.5; 
 	//机器人运动学模型参数
@@ -28,12 +32,11 @@ int main() {
 	double area[4][1] = {{-1}, {11}, {-1}, {11}};
 	int i = 0;
 	while (true) {
+		//printf("%d\n", sizeof(obstacle));
 		double** u = DynamicWindowApproach(x, Kinematic, goal, evalParam, obstacle, obstacleR);
 		f(x, u);
-		std::cout << "=================" << i++ << "=============" << std::endl;
-		print(x, 5, 1);
-		std::complex<double> mycomplex(x[0][0] - goal[0], x[1][0] - goal[1]);
-		if(std::norm(mycomplex)<0.5) {
+		printf("%lf %lf\n", x[0][0], x[1][0]);
+		if(pointdist(x[0][0],x[1][0],goal[0],goal[1])<0.5) {
 			return 0;
 		}
 	}
@@ -61,6 +64,10 @@ double sum(double a[], int n) {
 		sum += a[i];
 	}
 	return sum;
+}
+
+double pointdist(double a_x, double a_y, double b_x, double b_y) {
+	return(sqrt(double((a_x - b_x)*(a_x - b_x) + (a_y - b_y)*(a_y - b_y))));
 }
 
 void print(double *a, int m) {
@@ -114,7 +121,7 @@ void f(double** x, double** u) {
 } 
 
 //DWA算法实现
-double** DynamicWindowApproach(double** x, double model[6], double goal[2], double evalParam[4], double ob[18][2],
+double** DynamicWindowApproach(double** x, double model[6], double goal[2], double evalParam[4], double ob[][2],
 								double R) {
 	double** u = doubleArray(2, 1);
 	double* Vr = CalcDynamicWindow(x, model);
@@ -159,7 +166,7 @@ double* CalcDynamicWindow(double** x, double model[6]) {
 } 
 
 //评价函数
-std::vector<double*> Evaluation(double** x, double* Vr, double goal[2], double ob[18][2], double R, double model[6],
+std::vector<double*> Evaluation(double** x, double* Vr, double goal[2], double ob[][2], double R, double model[6],
 								double evalParam[4]) {
 	std::vector<double*> evalDB;
 	double** xt = doubleArray(5, 1);
@@ -223,11 +230,10 @@ double CalcHeadingEval(double** x, double goal[2]) {
 } 
 
 //障碍物距离评价函数
-double CalcDistEval(double** x, double ob[18][2], double R) {
+double CalcDistEval(double** x, double ob[][2], double R) {
 	double dist = 100;
-	for (int i = 0; i < 18; i++) {
-		std::complex<double> mycomplex(ob[i][0] - x[0][0], ob[i][1] - x[1][0]);
-		double disttmp = std::norm(mycomplex);
+	for (int i = 0; i < ob_size; i++) {
+		double disttmp = pointdist(ob[i][0], ob[i][1], x[0][0], x[1][0])-R;
 		if (dist > disttmp) {
 			dist = disttmp;
 		}
