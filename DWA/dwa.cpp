@@ -26,11 +26,16 @@ int main() {
 	double evalParam[4] = {0.05, 0.2, 0.1, 3.0}; 
 	//Ä£ÄâÇøÓò·¶Î§
 	double area[4][1] = {{-1}, {11}, {-1}, {11}};
-	for (int i = 0; i < 5000; i++) {
+	int i = 0;
+	while (true) {
 		double** u = DynamicWindowApproach(x, Kinematic, goal, evalParam, obstacle, obstacleR);
 		f(x, u);
-		std::cout << "=================" << i << "=============" << std::endl;
+		std::cout << "=================" << i++ << "=============" << std::endl;
 		print(x, 5, 1);
+		std::complex<double> mycomplex(x[0][0] - goal[0], x[1][0] - goal[1]);
+		if(std::norm(mycomplex)<0.5) {
+			return 0;
+		}
 	}
 }
 
@@ -64,6 +69,7 @@ void print(double *a, int m) {
 	}
 	std::cout << std::endl;
 }
+
 void print(double **a, int m, int n) {
 	for (int i = 0; i < m; i++) {
 		for (int j = 0; j < n; j++) {
@@ -134,6 +140,9 @@ double** DynamicWindowApproach(double** x, double model[6], double goal[2], doub
 	}
 	u[0][0] = evalDB[max_index][0];
 	u[1][0] = evalDB[max_index][1];
+	for (int i = 0; i < eval_len; i++) {
+		delete evalDB[i];
+	}
 	return u;
 } 
 
@@ -154,8 +163,8 @@ std::vector<double*> Evaluation(double** x, double* Vr, double goal[2], double o
 								double evalParam[4]) {
 	std::vector<double*> evalDB;
 	double** xt = doubleArray(5, 1);
-	for (double vt = Vr[0]; vt < Vr[1]; vt += model[4]) {
-		for (double ot = Vr[2]; ot < Vr[3]; ot += model[5]) {
+	for (double vt = Vr[0]; vt <= Vr[1]; vt += model[4]) {
+		for (double ot = Vr[2]; ot <= Vr[3]; ot += model[5]) {
 			for (int i = 0; i < 5; i++) {
 				xt[i][0] = x[i][0];
 			}
