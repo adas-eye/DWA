@@ -15,12 +15,21 @@ int main() {
 	//目标点位置
 	double goal[2] = {10, 10}; 
 	//障碍物位置列表
-	double obstacle[18][2] = {
-		{0, 2}, {2, 2}, {3, 4}, {5, 4}, {5, 5}, {5, 6}, {5, 9}, {8, 8}, {8, 9}, {7, 9}, {6, 5}, {6, 3}, {6, 8}, {6, 7},
-		{7, 4}, {9, 8}, {9, 11}, {9, 6}
-	}; 
+	// double obstacle[][2] = {
+	// 	{0, 2}, {2, 2}, {3, 4}, {5, 4}, {5, 5}, {5, 6}, {5, 9}, {8, 8}, {8, 9}, {7, 9}, {6, 5}, {6, 3}, {6, 8}, {6, 7},
+	// 	{7, 4}, {9, 8}, {9, 11}, {9, 6}
+	// }; 
 	// double obstacle[][2] = {
 	// 		{0, 2}, {2, 4}, {2, 5}, {4, 2}, {4, 4}, {5, 4}, {5, 5}, {5, 6}, {5, 9}, {8, 8}, {8, 9}, {7, 9} };
+	// double obstacle[][2] = {
+	// 	{0, 2}, {2, 4}, {2, 5}, {4, 2}, {5, 4}, {5, 5}, {5, 6}, {5,9},{8, 8}, {8, 9}, {7, 9}, {6, 8}, {6, 7},
+	// 	{7, 4}, {9, 8}, {9, 11}, {9, 6}
+	// };
+	// double obstacle[][2] = {
+	// 	{0, 2}, {2, 4}, {2, 5}, {4, 4}, {5, 4}, {5, 5}, {5, 6}, {5,9}, {7, 9}, {6, 8}, {6, 7},
+	// 	{7, 4},  {9, 6}
+	// };
+	double obstacle[][2] = { {4,2}, {5,5}, {6, 7} };
 	ob_size = sizeof(obstacle) / sizeof(double) / 2;
 	//冲突判定用的障碍物半径
 	double obstacleR = 0.5; 
@@ -32,11 +41,12 @@ int main() {
 	double area[4][1] = {{-1}, {11}, {-1}, {11}};
 	int i = 0;
 	while (true) {
-		//printf("%d\n", sizeof(obstacle));
 		double** u = DynamicWindowApproach(x, Kinematic, goal, evalParam, obstacle, obstacleR);
 		f(x, u);
+		freeArray(u, 2);
 		printf("%lf %lf\n", x[0][0], x[1][0]);
 		if(pointdist(x[0][0],x[1][0],goal[0],goal[1])<0.5) {
+			freeArray(x, 5);
 			return 0;
 		}
 	}
@@ -86,6 +96,12 @@ void print(double **a, int m, int n) {
 	}
 }
 
+void freeArray(double **p, int m) {
+	for (int i = 0; i < m; i++) {
+		free(p[i]);
+	}
+}
+
 //为二维数组分配内存
 double** doubleArray(int m, int n) {
 	double** res = (double**)malloc(sizeof(double*) * m);
@@ -126,6 +142,7 @@ double** DynamicWindowApproach(double** x, double model[6], double goal[2], doub
 	double** u = doubleArray(2, 1);
 	double* Vr = CalcDynamicWindow(x, model);
 	std::vector<double*> evalDB = Evaluation(x, Vr, goal, ob, R, model, evalParam);
+	free(Vr);
 	int eval_len = evalDB.size();
 	if (eval_len == 0) {
 		u[0][0] = 0;
@@ -148,7 +165,7 @@ double** DynamicWindowApproach(double** x, double model[6], double goal[2], doub
 	u[0][0] = evalDB[max_index][0];
 	u[1][0] = evalDB[max_index][1];
 	for (int i = 0; i < eval_len; i++) {
-		delete evalDB[i];
+		free(evalDB[i]);
 	}
 	return u;
 } 
@@ -175,7 +192,7 @@ std::vector<double*> Evaluation(double** x, double* Vr, double goal[2], double o
 			for (int i = 0; i < 5; i++) {
 				xt[i][0] = x[i][0];
 			}
-			double** traj = GenerateTrajectory(xt, vt, ot, evalParam[3], model);
+			GenerateTrajectory(xt, vt, ot, evalParam[3], model);
 			double heading = CalcHeadingEval(xt, goal);
 			double dist = CalcDistEval(xt, ob, R);
 			double vel = abs(vt);
@@ -191,29 +208,22 @@ std::vector<double*> Evaluation(double** x, double* Vr, double goal[2], double o
 			}
 		}
 	}
+	freeArray(xt, 5);
 	return evalDB;
 } 
 
 //单条轨迹生成、轨迹推演函数
-double** GenerateTrajectory(double** x, double vt, double ot, double evaldt, double model[6]) {
+void GenerateTrajectory(double** x, double vt, double ot, double evaldt, double model[6]) {
 	int index = 0;
 	double** u = doubleArray(2, 1);
 	u[0][0] = vt;
 	u[1][0] = ot;
 	int n = int(evaldt / dt) + 1;
-	double** traj = doubleArray(5, n);
-	for (int i = 0; i < 5; i++) {
-		traj[i][index] = x[i][0];
-	}
-	index++;
 	while (index < n) {
 		f(x, u);
-		for (int i = 0; i < 5; i++) {
-			traj[i][index] = x[i][0];
-		}
 		index++;
 	}
-	return traj;
+	freeArray(u, 2);
 } 
 
 //heading的评价函数计算
@@ -269,4 +279,5 @@ void NormalizeEval(std::vector<double*> evalDB) {
 			}
 		}
 	}
+	free(eval);
 }
